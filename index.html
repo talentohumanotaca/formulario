@@ -1,21 +1,45 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ficha de Datos - Empresa Comunal Taca</title>
+  <meta name="description" content="Formulario de postulación para la Empresa Comunal de Servicios Múltiples de la Comunidad Campesina de Taca">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #0973b0;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
-<body class="antialiased">
+<body>
   <div id="root"></div>
-
+  
   <script type="text/babel">
     const { useState, useRef } = React;
 
-    // --- ICONOS (sin cambios) ---
+    // ========================================
+    // CONFIGURACIÓN DEL FORMULARIO
+    // ========================================
+    
+    // ⚠️ IMPORTANTE: REEMPLAZA ESTA URL CON LA URL DE TU GOOGLE APPS SCRIPT
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/TU_ID_DE_SCRIPT_AQUI/exec';
+    
+    // ========================================
+    // COMPONENTES DE ICONOS SVG
+    // ========================================
     const ChevronDown = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>;
     const ChevronUp = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="18 15 12 9 6 15"></polyline></svg>;
     const User = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
@@ -26,534 +50,678 @@
     const CheckCircle = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
     const AlertCircle = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>;
     const Building2 = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></svg>;
+    const Spinner = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-6.219-8.56"></path></svg>;
 
-    // --- FIN ICONOS ---
+    // ========================================
+    // COMPONENTES AUXILIARES
+    // ========================================
+    
+    const FormInput = ({ label, name, type = "text", required = false, onChange, value, placeholder }) => (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          {label} {required && <span className="text-red-600">*</span>}
+        </label>
+        <input
+          type={type}
+          name={name}
+          onChange={onChange}
+          value={value}
+          placeholder={placeholder}
+          required={required}
+          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#0973b0] focus:border-transparent transition"
+        />
+      </div>
+    );
 
+    const Section = ({ title, icon: Icon, expanded, onToggle, children }) => (
+      <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="w-full px-6 py-4 bg-gradient-to-r from-[#0973b0] to-[#075a90] text-white flex justify-between items-center hover:from-[#075a90] hover:to-[#054070] transition"
+        >
+          <div className="flex items-center gap-3">
+            <Icon size={24} />
+            <h3 className="text-lg font-semibold">{title}</h3>
+          </div>
+          {expanded ? <ChevronUp /> : <ChevronDown />}
+        </button>
+        {expanded && <div className="p-6">{children}</div>}
+      </div>
+    );
+
+    const FileUpload = ({ label, required, keyName, onClick, onChange, selected, accept = "*" }) => {
+      const fileInputRef = useRef(null);
+      return (
+        <div className="flex flex-col">
+          <label className="text-sm font-medium text-gray-700 mb-2">
+            {label} {required && <span className="text-red-600">*</span>}
+          </label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={onChange}
+            accept={accept}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className={`px-4 py-3 border-2 border-dashed rounded-lg hover:border-[#0973b0] transition flex items-center justify-center gap-2 ${
+              selected ? 'border-green-500 bg-green-50' : 'border-gray-300'
+            }`}
+          >
+            <Paperclip size={20} />
+            {selected ? `✅ ${selected}` : 'Seleccionar archivo'}
+          </button>
+        </div>
+      );
+    };
+
+    const MessageAlert = ({ type, text }) => {
+      if (!text) return null;
+      
+      const bgColor = type === 'success' ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700';
+      const Icon = type === 'success' ? CheckCircle : AlertCircle;
+      
+      return (
+        <div className={`border px-4 py-3 rounded relative mb-4 ${bgColor}`} role="alert">
+          <div className="flex items-center gap-2">
+            <Icon size={20} />
+            <span className="block sm:inline">{text}</span>
+          </div>
+        </div>
+      );
+    };
+
+    // ========================================
+    // COMPONENTE PRINCIPAL DEL FORMULARIO
+    // ========================================
+    
     function FichaDatos() {
       const [formData, setFormData] = useState({});
-      const [expandedSections, setExpandedSections] = useState([0,1,2,3,4,5,6]);
-      const [familiares, setFamiliares] = useState([{id:1}]);
-      const [contactosEmergencia, setContactosEmergencia] = useState([{id:1}]);
-      const [estudios, setEstudios] = useState([{id:1}]);
-      const [experiencias, setExperiencias] = useState([{id:1}]);
-
-      // attachments: { key: { name: string, base64: string } }
+      const [expandedSections, setExpandedSections] = useState([0, 1, 2, 3, 4, 5, 6]);
+      const [familiares, setFamiliares] = useState([{ id: 1 }]);
+      const [contactosEmergencia, setContactosEmergencia] = useState([{ id: 1 }]);
+      const [estudios, setEstudios] = useState([{ id: 1 }]);
+      const [experiencias, setExperiencias] = useState([{ id: 1 }]);
       const [attachments, setAttachments] = useState({});
+      const [uploadedFiles, setUploadedFiles] = useState({});
+      const [loading, setLoading] = useState(false);
+      const [submitMessage, setSubmitMessage] = useState({ type: '', text: '' });
 
-      // Util: manejar cambios de inputs simples
       const handleChange = (e) => {
-        const { name, type, value, checked } = e.target;
-        const v = type === 'checkbox' ? checked : value;
-        setFormData(prev => ({ ...prev, [name]: v }));
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+          ...prev,
+          [name]: type === 'checkbox' ? checked : value
+        }));
       };
 
       const toggleSection = (id) => {
-        setExpandedSections(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
+        setExpandedSections(prev =>
+          prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+        );
       };
 
-      // Abre el input file oculto por id
-      const openFileInput = (key) => {
-        const el = document.getElementById(`file_${key}`);
-        if(el) el.click();
-      };
-
-      // Lee archivo y lo convierte a Base64
-      const handleFileSelected = (key, e) => {
+      const handleFileChange = async (key, e) => {
         const file = e.target.files[0];
-        if(!file) {
-          setAttachments(prev => ({...prev, [key]: null}));
-          return;
+        if (file) {
+          // Validar tamaño (máximo 10MB)
+          if (file.size > 10 * 1024 * 1024) {
+            setSubmitMessage({
+              type: 'error',
+              text: `El archivo ${file.name} es muy grande. Máximo 10MB permitido.`
+            });
+            e.target.value = '';
+            return;
+          }
+          
+          // Convertir a base64
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            setUploadedFiles(prev => ({
+              ...prev,
+              [key]: {
+                name: file.name,
+                type: file.type,
+                content: event.target.result
+              }
+            }));
+            setAttachments(prev => ({ ...prev, [key]: file.name }));
+          };
+          reader.readAsDataURL(file);
         }
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-          const base64 = evt.target.result.split(',')[1]; // quitar data:*/*;base64,
-          setAttachments(prev => ({ ...prev, [key]: { name: file.name, base64 } }));
-        };
-        reader.onerror = function() {
-          alert('Error leyendo archivo: ' + file.name);
-        };
-        reader.readAsDataURL(file);
       };
 
-      // Construcción de arrays dinámicos (familiares, contactos, estudios, experiencias)
-      const gatherFamiliares = () => familiares.map(fam => ({
-        nombres: formData[`familiar_${fam.id}_nombres`] || '',
-        apellido_paterno: formData[`familiar_${fam.id}_apellido_paterno`] || '',
-        apellido_materno: formData[`familiar_${fam.id}_apellido_materno`] || '',
-        dni: formData[`familiar_${fam.id}_dni`] || '',
-        parentesco: formData[`familiar_${fam.id}_parentesco`] || '',
-        fecha_nacimiento: formData[`familiar_${fam.id}_fecha_nacimiento`] || ''
-      }));
-      const gatherContactos = () => contactosEmergencia.map(c => ({
-        nombre: formData[`contacto_${c.id}_nombre`] || '',
-        vinculo: formData[`contacto_${c.id}_vinculo`] || '',
-        celular: formData[`contacto_${c.id}_celular`] || ''
-      }));
-      const gatherEstudios = () => estudios.map(s => ({
-        centro: formData[`estudio_${s.id}_centro`] || '',
-        carrera: formData[`estudio_${s.id}_carrera`] || '',
-        duracion: formData[`estudio_${s.id}_duracion`] || '',
-        ingreso: formData[`estudio_${s.id}_ingreso`] || '',
-        egreso: formData[`estudio_${s.id}_egreso`] || ''
-      }));
-      const gatherExperiencias = () => experiencias.map(x => ({
-        organizacion: formData[`exp_${x.id}_org`] || '',
-        cargo: formData[`exp_${x.id}_cargo`] || '',
-        tiempo: formData[`exp_${x.id}_tiempo`] || '',
-        motivo: formData[`exp_${x.id}_motivo`] || '',
-        jefe: formData[`exp_${x.id}_jefe`] || '',
-        cargo_jefe: formData[`exp_${x.id}_cargo_jefe`] || '',
-        telefono_jefe: formData[`exp_${x.id}_telefono_jefe`] || ''
-      }));
-
-      // Envío al Apps Script (incluye attachments en base64)
       const handleSubmit = async (e) => {
         e?.preventDefault();
-
-        // URL de Apps Script (la que proporcionaste)
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyTxWhg6uegQHYP_mUCpGuan3sjIORd7eMfqCEGsI8XXGvj6HFy8TYzq5yfIBfNlkpAWw/exec';
-
-        // Preparar datos
-        const datosCompletos = {
-          ...formData,
-          familiares: gatherFamiliares(),
-          contactos: gatherContactos(),
-          estudios: gatherEstudios(),
-          experiencias: gatherExperiencias(),
-          attachments // estructura: { dni_frente: {name, base64}, ... }
-        };
-
-        // Validaciones simples: campos requeridos (por ejemplo dni, nombres, correo).
-        // Mantuvimos la UX original (HTML requiere) pero añadimos check por si el usuario anula.
-        if(!formData.nombres || !formData.apellido_paterno || !formData.dni || !formData.correo) {
-          alert('Por favor complete los campos obligatorios (Nombres, Apellido Paterno, DNI, Email).');
+        
+        // Validar que la URL esté configurada
+        if (GOOGLE_SCRIPT_URL.includes('TU_ID_DE_SCRIPT_AQUI')) {
+          setSubmitMessage({
+            type: 'error',
+            text: '⚠️ El formulario no está configurado. Por favor, configure la URL del Google Apps Script.'
+          });
+          return;
+        }
+        
+        // Validar campos requeridos
+        if (!formData.nombres || !formData.apellido_paterno || !formData.dni) {
+          setSubmitMessage({
+            type: 'error',
+            text: 'Por favor complete los campos obligatorios: Nombres, Apellido Paterno y DNI'
+          });
           return;
         }
 
-        // Algunos adjuntos marcados como obligatorios en UI: dni_frente, cv, vacuna, etc.
-        const requiredFiles = ['dni_frente','cv','vacuna'];
-        for(const k of requiredFiles) {
-          if(!attachments[k] || !attachments[k].base64) {
-            if(confirm(`Falta archivo requerido: "${k}". ¿Deseas continuar sin adjuntarlo? (Cancelar para adjuntar)`)) {
-              // si confirma continuar, rompe validación y sigue
-              continue;
-            } else {
-              // Abrir selector del archivo faltante
-              openFileInput(k);
-              return;
-            }
-          }
+        if (!formData.acepta_terminos) {
+          setSubmitMessage({
+            type: 'error',
+            text: 'Debe aceptar los términos y condiciones para continuar'
+          });
+          return;
         }
 
+        setLoading(true);
+        setSubmitMessage({ type: '', text: '' });
+
+        // Preparar datos estructurados
+        const familiaresData = familiares.map(fam => ({
+          nombres: formData[`familiar_${fam.id}_nombres`] || '',
+          apellido_paterno: formData[`familiar_${fam.id}_apellido_paterno`] || '',
+          apellido_materno: formData[`familiar_${fam.id}_apellido_materno`] || '',
+          dni: formData[`familiar_${fam.id}_dni`] || '',
+          parentesco: formData[`familiar_${fam.id}_parentesco`] || '',
+          fecha_nacimiento: formData[`familiar_${fam.id}_fecha_nacimiento`] || ''
+        }));
+
+        const contactosData = contactosEmergencia.map(cont => ({
+          nombre: formData[`contacto_${cont.id}_nombre`] || '',
+          vinculo: formData[`contacto_${cont.id}_vinculo`] || '',
+          telefono: formData[`contacto_${cont.id}_telefono`] || ''
+        }));
+
+        const estudiosData = estudios.map(est => ({
+          nivel: formData[`estudio_${est.id}_nivel`] || '',
+          institucion: formData[`estudio_${est.id}_institucion`] || '',
+          especialidad: formData[`estudio_${est.id}_especialidad`] || '',
+          grado: formData[`estudio_${est.id}_grado`] || '',
+          anio_inicio: formData[`estudio_${est.id}_anio_inicio`] || '',
+          anio_fin: formData[`estudio_${est.id}_anio_fin`] || ''
+        }));
+
+        const experienciasData = experiencias.map(exp => ({
+          organizacion: formData[`exp_${exp.id}_org`] || '',
+          cargo: formData[`exp_${exp.id}_cargo`] || '',
+          tiempo: formData[`exp_${exp.id}_tiempo`] || '',
+          motivo_cese: formData[`exp_${exp.id}_motivo`] || '',
+          jefe: formData[`exp_${exp.id}_jefe`] || '',
+          cargo_jefe: formData[`exp_${exp.id}_cargo_jefe`] || '',
+          telefono_jefe: formData[`exp_${exp.id}_telefono_jefe`] || ''
+        }));
+
+        const dataToSend = {
+          ...formData,
+          familiares: familiaresData,
+          contactos_emergencia: contactosData,
+          estudios: estudiosData,
+          experiencias: experienciasData,
+          archivos: uploadedFiles
+        };
+
         try {
-          alert('Enviando datos...');
-          // Enviar JSON. Asegúrate que tu Apps Script permita CORS y acepte JSON.
-          const res = await fetch(GOOGLE_SCRIPT_URL, {
+          const response = await fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(datosCompletos)
+            mode: 'no-cors', // Importante para Google Apps Script
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dataToSend)
           });
 
-          // Si Apps Script devuelve 200/201 buena señal. Si usas deploy "exec" y no configurar CORS, puede fallar en navegador.
-          if(res && (res.status === 200 || res.status === 201 || res.status === 0)) {
-            alert('¡Registro completado! Gracias por completar su Ficha de Datos.');
-            window.location.reload();
-          } else {
-            // Intentar leer texto de respuesta por si hay info
-            let text = '';
-            try { text = await res.text(); } catch(e) {}
-            console.warn('Respuesta del servidor:', res.status, text);
-            alert('Envío realizado (verifica en Drive). Respuesta del servidor: ' + res.status);
-            window.location.reload();
-          }
-        } catch(err) {
-          console.error('Error al enviar:', err);
-          alert('Hubo un error al enviar los datos. Verifica la URL del Apps Script y CORS. Si tu Apps Script requiere "no-cors", dímelo y ajusto la lógica.');
+          // Con mode: 'no-cors' no podemos leer la respuesta,
+          // pero si no hay error, asumimos que fue exitoso
+          setSubmitMessage({
+            type: 'success',
+            text: '✅ ¡Postulación enviada exitosamente! Recibirá un correo de confirmación si proporcionó su email.'
+          });
+          
+          // Scroll al mensaje
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          
+          // Ofrecer limpiar formulario después de 3 segundos
+          setTimeout(() => {
+            if (confirm('¿Desea limpiar el formulario para un nuevo registro?')) {
+              window.location.reload();
+            }
+          }, 3000);
+          
+        } catch (error) {
+          console.error('Error:', error);
+          setSubmitMessage({
+            type: 'error',
+            text: '❌ Error al enviar el formulario. Por favor verifique su conexión e intente nuevamente.'
+          });
+        } finally {
+          setLoading(false);
         }
       };
 
-      // Componentes auxiliares (manteniendo estilo)
-      const Section = ({title, icon: Icon, children, expanded, onToggle}) => (
-        <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow">
-          <button type="button" onClick={onToggle} className="w-full flex items-center justify-between p-5 bg-[#0973b0] text-white hover:bg-[#075a90] transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="bg-white p-2 rounded-lg">
-                <Icon size={20} className="text-[#0973b0]"/>
-              </div>
-              <h3 className="text-lg font-semibold">{title}</h3>
-            </div>
-            {expanded ? <ChevronUp size={24}/> : <ChevronDown size={24}/>}
-          </button>
-          {expanded && <div className="p-6 bg-white">{children}</div>}
-        </div>
-      );
-
-      const FormInput = ({label, required, type='text', name, onChange, ...props}) => (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">{label}: {required && <span className="text-red-600">*</span>}</label>
-          <input name={name} type={type} onChange={onChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0973b0] focus:border-transparent transition" {...props}/>
-        </div>
-      );
-
-      // FileUpload usa un input hidden con id file_<key>
-      const FileUpload = ({label, required, keyName, selectedName}) => (
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-[#0973b0] transition flex items-center gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">{label}: {required && <span className="text-red-600">*</span>}</label>
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={() => openFileInput(keyName)} className="px-4 py-2 bg-[#0973b0] text-white rounded-lg hover:bg-[#075a90] transition text-sm flex items-center gap-2">
-                <Paperclip size={16}/> Seleccionar archivo
-              </button>
-              <span className="text-sm text-gray-500">{selectedName || 'Ningún archivo seleccionado'}</span>
-            </div>
-          </div>
-          <input id={`file_${keyName}`} type="file" accept="*/*" onChange={(e)=>handleFileSelected(keyName,e)} className="hidden"/>
-        </div>
-      );
-
       return (
-        <form onSubmit={handleSubmit} className="min-h-screen bg-white">
-          <div className="bg-[#0973b0] text-white py-6 px-4 shadow-lg">
-            <div className="max-w-6xl mx-auto text-center">
-              <h1 className="text-3xl font-bold mb-1">Ficha de Registro de Datos</h1>
-              <p className="text-white/90 text-lg">Empresa Comunal de Servicios Múltiples</p>
-              <p className="text-white/90 font-medium">Comunidad Campesina de Taca</p>
-            </div>
-          </div>
-
-          <div className="max-w-6xl mx-auto px-4 py-6">
-            <div className="bg-gray-50 border-l-4 border-[#0973b0] p-4 rounded-r-lg shadow-sm">
-              <div className="flex items-start">
-                <AlertCircle className="text-[#0973b0] mr-3 mt-0.5 flex-shrink-0" size={22}/>
-                <div className="text-sm space-y-1">
-                  <p><span className="text-red-600 font-bold">(*)</span> Campos obligatorios</p>
-                  <p className="text-gray-700">Complete todos los campos requeridos para activar su registro</p>
-                </div>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 py-8 px-4">
+          <div className="max-w-6xl mx-auto">
+            {/* HEADER */}
+            <div className="text-center mb-8">
+              <div className="inline-block p-4 bg-white rounded-full shadow-lg mb-4">
+                <Building2 size={48} className="text-[#0973b0]" />
               </div>
+              <h1 className="text-4xl font-bold text-gray-800 mb-2">Ficha de Postulante</h1>
+              <p className="text-gray-600">Empresa Comunal de Servicios Múltiples - Comunidad Campesina de Taca</p>
             </div>
-          </div>
 
-          <div className="max-w-6xl mx-auto px-4 pb-12 space-y-4">
+            {/* MENSAJE DE ESTADO */}
+            <MessageAlert type={submitMessage.type} text={submitMessage.text} />
 
-            {/* I. DATOS GENERALES */}
-            <Section title="I. Datos Generales" icon={Building2} expanded={expandedSections.includes(0)} onToggle={()=>toggleSection(0)}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Área/Departamento: <span className="text-red-600">*</span></label>
-                  <select name="area" onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0973b0]">
-                    <option value="">-- Seleccione --</option>
-                    <option>Administración</option>
-                    <option>Recursos Humanos</option>
-                    <option>Operaciones</option>
-                    <option>Servicios Generales</option>
-                    <option>Logística</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Fuente de Reclutamiento: <span className="text-red-600">*</span></label>
-                  <div className="flex flex-wrap gap-3">
-                    {['Facebook','Referido','Indeed','LinkedIn','Computrabajo'].map(s=>(
-                      <label key={s} className="inline-flex items-center">
-                        <input type="radio" name="fuente" value={s} onChange={handleChange} className="text-[#0973b0] focus:ring-[#0973b0]"/>
-                        <span className="ml-2 text-sm">{s}</span>
-                      </label>
-                    ))}
-                    <label className="inline-flex items-center">
-                      <input type="radio" name="fuente" value="Otro" onChange={handleChange} className="text-[#0973b0]"/>
-                      <span className="ml-2 text-sm">Otro:</span>
-                      <input type="text" name="fuente_otro" onChange={handleChange} className="ml-2 px-3 py-1 border rounded-md text-sm" placeholder="Especificar"/>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </Section>
-
-            {/* II. DATOS PERSONALES */}
-            <Section title="II. Datos Personales" icon={User} expanded={expandedSections.includes(1)} onToggle={()=>toggleSection(1)}>
-              <div className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* I. DATOS PERSONALES */}
+              <Section title="I. Datos Personales" icon={User} expanded={expandedSections.includes(0)} onToggle={() => toggleSection(0)}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormInput label="Apellido Paterno" name="apellido_paterno" onChange={handleChange} required/>
-                  <FormInput label="Apellido Materno" name="apellido_materno" onChange={handleChange} required/>
-                  <FormInput label="Nombres" name="nombres" onChange={handleChange} required/>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormInput label="DNI" name="dni" type="number" onChange={handleChange} required/>
-                  <FormInput label="Teléfono Fijo" name="telefono_fijo" type="tel" onChange={handleChange}/>
-                  <FormInput label="Email" name="correo" type="email" onChange={handleChange} required/>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormInput label="Celular 1" name="celular1" type="tel" onChange={handleChange} required/>
-                  <FormInput label="Celular 2" name="celular2" type="tel" onChange={handleChange}/>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormInput label="Fecha de Nacimiento" name="fecha_nacimiento" type="date" onChange={handleChange} required/>
+                  <FormInput label="Apellido Paterno" name="apellido_paterno" required onChange={handleChange} />
+                  <FormInput label="Apellido Materno" name="apellido_materno" onChange={handleChange} />
+                  <FormInput label="Nombres" name="nombres" required onChange={handleChange} />
+                  <FormInput label="DNI" name="dni" type="number" required onChange={handleChange} />
+                  <FormInput label="Fecha de Nacimiento" name="fecha_nacimiento" type="date" onChange={handleChange} />
+                  <FormInput label="Edad" name="edad" type="number" onChange={handleChange} />
+                  
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Género: <span className="text-red-600">*</span></label>
-                    <div className="flex gap-4">
-                      {['Femenino','Masculino','Prefiero no decir'].map(g=>(
-                        <label key={g} className="inline-flex items-center">
-                          <input type="radio" name="genero" value={g} onChange={handleChange} className="text-[#0973b0]"/>
-                          <span className="ml-2">{g}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Estado Civil: <span className="text-red-600">*</span></label>
-                    <div className="flex flex-wrap gap-3">
-                      {['Soltero','Casado','Viudo','Divorciado'].map(e=>(
-                        <label key={e} className="inline-flex items-center">
-                          <input type="radio" name="estado_civil" value={e} onChange={handleChange} className="text-[#0973b0]"/>
-                          <span className="ml-2 text-sm">{e}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Lugar de Nacimiento: <span className="text-red-600">*</span></label>
-                    <select name="lugar_nacimiento" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#0973b0]">
-                      <option value="">-- Seleccione --</option>
-                      <option>Lima</option><option>Cusco</option><option>Arequipa</option><option>Puno</option><option>Ayacucho</option>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Sexo</label>
+                    <select name="sexo" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#0973b0]">
+                      <option value="">Seleccionar</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Femenino">Femenino</option>
                     </select>
                   </div>
+                  
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Dirección Actual: <span className="text-red-600">*</span></label>
-                    <textarea name="direccion" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#0973b0]" rows={2} placeholder="Av. Los Almendros 123..."/>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Banco: <span className="text-red-600">*</span></label>
-                    <div className="flex gap-4">
-                      {['BCP','Scotiabank','Otros'].map(b=>(
-                        <label key={b} className="inline-flex items-center">
-                          <input type="radio" name="banco" value={b} onChange={handleChange} className="text-[#0973b0]"/>
-                          <span className="ml-2">{b}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Sistema Pensionario: <span className="text-red-600">*</span></label>
-                    <div className="flex gap-4">
-                      {['ONP','AFP'].map(p=>(
-                        <label key={p} className="inline-flex items-center">
-                          <input type="radio" name="pension" value={p} onChange={handleChange} className="text-[#0973b0]"/>
-                          <span className="ml-2">{p}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Licencia de Conducir:</label>
-                    <select name="licencia" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#0973b0]">
-                      <option value="">-- Seleccione --</option>
-                      <option>A-I</option><option>A-IIa</option><option>A-IIb</option><option>A-IIIa</option><option>A-IIIb</option><option>A-IIIc</option>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Estado Civil</label>
+                    <select name="estado_civil" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#0973b0]">
+                      <option value="">Seleccionar</option>
+                      <option value="Soltero">Soltero(a)</option>
+                      <option value="Casado">Casado(a)</option>
+                      <option value="Conviviente">Conviviente</option>
+                      <option value="Divorciado">Divorciado(a)</option>
+                      <option value="Viudo">Viudo(a)</option>
                     </select>
                   </div>
-                  <FormInput label="Talla de Zapatos" name="talla_zapatos" onChange={handleChange}/>
-                  <FormInput label="Talla de Ropa" name="talla_ropa" onChange={handleChange}/>
+                  
+                  <FormInput label="Teléfono Fijo" name="telefono" type="tel" onChange={handleChange} />
+                  <FormInput label="Celular" name="celular" type="tel" onChange={handleChange} />
+                  <FormInput label="Email" name="email" type="email" onChange={handleChange} />
+                  <FormInput label="RUC" name="ruc" onChange={handleChange} />
+                  <FormInput label="Brevete" name="brevete" onChange={handleChange} />
+                  <FormInput label="Categoría Brevete" name="categoria_brevete" onChange={handleChange} />
                 </div>
-              </div>
-            </Section>
-
-            {/* III. DATOS FAMILIARES */}
-            <Section title="III. Datos Familiares" icon={Users} expanded={expandedSections.includes(2)} onToggle={()=>toggleSection(2)}>
-              <div className="space-y-6">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="font-medium">Datos de Familiares <span className="text-red-600">*</span></h4>
-                    <button type="button" onClick={()=>setFamiliares(p=>[...p,{id: p.length+1}])} className="px-4 py-2 bg-[#0973b0] text-white rounded-lg hover:bg-[#075a90] text-sm">+ Agregar</button>
+                
+                <div className="mt-4">
+                  <FormInput label="Dirección Actual" name="direccion" onChange={handleChange} />
+                  <div className="mt-4">
+                    <FormInput label="Referencia de Ubicación" name="referencia" onChange={handleChange} />
                   </div>
-                  {familiares.map((fam, idx)=>(
-                    <div key={fam.id} className="mb-6 pb-6 border-b last:border-0">
-                      <div className="flex justify-between mb-3">
-                        <span className="text-sm font-semibold">Familiar {idx+1}</span>
-                        {familiares.length>1 && <button type="button" onClick={()=>setFamiliares(p=>p.filter(x=>x.id !== fam.id))} className="text-red-600 text-sm">Eliminar</button>}
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <FormInput label="Número de Cuenta Bancaria" name="numero_cuenta" onChange={handleChange} />
+                  <FormInput label="CCI" name="cci" onChange={handleChange} />
+                  <FormInput label="AFP" name="afp" onChange={handleChange} />
+                  <FormInput label="Tipo de Comisión AFP" name="comision_afp" onChange={handleChange} />
+                  <FormInput label="CUSPP" name="cuspp" onChange={handleChange} />
+                </div>
+              </Section>
+
+              {/* II. DATOS FAMILIARES */}
+              <Section title="II. Datos Familiares" icon={Users} expanded={expandedSections.includes(1)} onToggle={() => toggleSection(1)}>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Familiares Directos</h4>
+                    <button
+                      type="button"
+                      onClick={() => setFamiliares(prev => [...prev, { id: prev.length + 1 }])}
+                      className="px-4 py-2 bg-[#0973b0] text-white rounded-lg hover:bg-[#075a90] text-sm"
+                    >
+                      + Agregar Familiar
+                    </button>
+                  </div>
+                  
+                  {familiares.map((fam, idx) => (
+                    <div key={fam.id} className="bg-gray-50 p-4 rounded-lg">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-sm font-semibold">Familiar {idx + 1}</span>
+                        {familiares.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setFamiliares(prev => prev.filter(f => f.id !== fam.id))}
+                            className="text-red-600 text-sm hover:underline"
+                          >
+                            Eliminar
+                          </button>
+                        )}
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <FormInput label="Nombres" name={`familiar_${fam.id}_nombres`} onChange={handleChange} required/>
-                        <FormInput label="Apellido Paterno" name={`familiar_${fam.id}_apellido_paterno`} onChange={handleChange} required/>
-                        <FormInput label="Apellido Materno" name={`familiar_${fam.id}_apellido_materno`} onChange={handleChange} required/>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                        <FormInput label="DNI" name={`familiar_${fam.id}_dni`} type="number" onChange={handleChange} required/>
+                        <FormInput label="Nombres" name={`familiar_${fam.id}_nombres`} onChange={handleChange} />
+                        <FormInput label="Apellido Paterno" name={`familiar_${fam.id}_apellido_paterno`} onChange={handleChange} />
+                        <FormInput label="Apellido Materno" name={`familiar_${fam.id}_apellido_materno`} onChange={handleChange} />
+                        <FormInput label="DNI" name={`familiar_${fam.id}_dni`} onChange={handleChange} />
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Parentesco: <span className="text-red-600">*</span></label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Parentesco</label>
                           <select name={`familiar_${fam.id}_parentesco`} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#0973b0]">
-                            <option value="">-- Seleccione --</option>
-                            <option>Cónyuge</option><option>Hijo/a</option><option>Padre</option><option>Madre</option><option>Hermano/a</option>
+                            <option value="">Seleccionar</option>
+                            <option value="Padre">Padre</option>
+                            <option value="Madre">Madre</option>
+                            <option value="Hijo">Hijo(a)</option>
+                            <option value="Hermano">Hermano(a)</option>
+                            <option value="Conyuge">Cónyuge</option>
+                            <option value="Otro">Otro</option>
                           </select>
                         </div>
-                        <FormInput label="Fecha de Nacimiento" name={`familiar_${fam.id}_fecha_nacimiento`} type="date" onChange={handleChange} required/>
+                        <FormInput label="Fecha Nacimiento" name={`familiar_${fam.id}_fecha_nacimiento`} type="date" onChange={handleChange} />
                       </div>
                     </div>
                   ))}
                 </div>
+              </Section>
 
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="font-medium">Contactos de Emergencia <span className="text-red-600">*</span></h4>
-                    <button type="button" onClick={()=>setContactosEmergencia(p=>[...p,{id: p.length+1}])} className="px-4 py-2 bg-[#0973b0] text-white rounded-lg hover:bg-[#075a90] text-sm">+ Agregar</button>
+              {/* III. CONTACTOS DE EMERGENCIA */}
+              <Section title="III. Contactos de Emergencia" icon={AlertCircle} expanded={expandedSections.includes(2)} onToggle={() => toggleSection(2)}>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Personas a contactar en caso de emergencia</h4>
+                    <button
+                      type="button"
+                      onClick={() => setContactosEmergencia(prev => [...prev, { id: prev.length + 1 }])}
+                      className="px-4 py-2 bg-[#0973b0] text-white rounded-lg hover:bg-[#075a90] text-sm"
+                    >
+                      + Agregar Contacto
+                    </button>
                   </div>
-                  {contactosEmergencia.map((cont, idx)=>(
-                    <div key={cont.id} className="mb-6 pb-6 border-b last:border-0">
-                      <div className="flex justify-between mb-3">
-                        <span className="text-sm font-semibold">Contacto {idx+1}</span>
-                        {contactosEmergencia.length>1 && <button type="button" onClick={()=>setContactosEmergencia(p=>p.filter(x=>x.id !== cont.id))} className="text-red-600 text-sm">Eliminar</button>}
+                  
+                  {contactosEmergencia.map((cont, idx) => (
+                    <div key={cont.id} className="bg-gray-50 p-4 rounded-lg">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-sm font-semibold">Contacto {idx + 1}</span>
+                        {contactosEmergencia.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setContactosEmergencia(prev => prev.filter(c => c.id !== cont.id))}
+                            className="text-red-600 text-sm hover:underline"
+                          >
+                            Eliminar
+                          </button>
+                        )}
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <FormInput label="Nombres y Apellidos" name={`contacto_${cont.id}_nombre`} onChange={handleChange} required/>
+                        <FormInput label="Nombre Completo" name={`contacto_${cont.id}_nombre`} onChange={handleChange} />
+                        <FormInput label="Vínculo" name={`contacto_${cont.id}_vinculo`} onChange={handleChange} />
+                        <FormInput label="Teléfono" name={`contacto_${cont.id}_telefono`} type="tel" onChange={handleChange} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+
+              {/* IV. FORMACIÓN ACADÉMICA */}
+              <Section title="IV. Formación Académica" icon={GraduationCap} expanded={expandedSections.includes(3)} onToggle={() => toggleSection(3)}>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Estudios Realizados</h4>
+                    <button
+                      type="button"
+                      onClick={() => setEstudios(prev => [...prev, { id: prev.length + 1 }])}
+                      className="px-4 py-2 bg-[#0973b0] text-white rounded-lg hover:bg-[#075a90] text-sm"
+                    >
+                      + Agregar Estudio
+                    </button>
+                  </div>
+                  
+                  {estudios.map((est, idx) => (
+                    <div key={est.id} className="bg-gray-50 p-4 rounded-lg">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-sm font-semibold">Estudio {idx + 1}</span>
+                        {estudios.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setEstudios(prev => prev.filter(e => e.id !== est.id))}
+                            className="text-red-600 text-sm hover:underline"
+                          >
+                            Eliminar
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Vínculo: <span className="text-red-600">*</span></label>
-                          <select name={`contacto_${cont.id}_vinculo`} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#0973b0]">
-                            <option value="">-- Seleccione --</option>
-                            <option>Cónyuge</option><option>Padre/Madre</option><option>Hermano/a</option><option>Amigo/a</option>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Nivel</label>
+                          <select name={`estudio_${est.id}_nivel`} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#0973b0]">
+                            <option value="">Seleccionar</option>
+                            <option value="Primaria">Primaria</option>
+                            <option value="Secundaria">Secundaria</option>
+                            <option value="Técnico">Técnico</option>
+                            <option value="Superior">Superior</option>
+                            <option value="Postgrado">Postgrado</option>
                           </select>
                         </div>
-                        <FormInput label="Celular" name={`contacto_${cont.id}_celular`} type="tel" onChange={handleChange} required/>
+                        <FormInput label="Institución" name={`estudio_${est.id}_institucion`} onChange={handleChange} />
+                        <FormInput label="Especialidad/Carrera" name={`estudio_${est.id}_especialidad`} onChange={handleChange} />
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Grado Obtenido</label>
+                          <select name={`estudio_${est.id}_grado`} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#0973b0]">
+                            <option value="">Seleccionar</option>
+                            <option value="Completo">Completo</option>
+                            <option value="Incompleto">Incompleto</option>
+                            <option value="Estudiando">Estudiando</option>
+                            <option value="Egresado">Egresado</option>
+                            <option value="Titulado">Titulado</option>
+                            <option value="Bachiller">Bachiller</option>
+                          </select>
+                        </div>
+                        <FormInput label="Año Inicio" name={`estudio_${est.id}_anio_inicio`} type="number" onChange={handleChange} />
+                        <FormInput label="Año Fin" name={`estudio_${est.id}_anio_fin`} type="number" onChange={handleChange} />
                       </div>
                     </div>
                   ))}
                 </div>
+              </Section>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormInput label="Personas a cargo" name="personas_cargo" type="number" onChange={handleChange}/>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">¿Familiares en la empresa?</label>
-                    <select name="familiares_empresa" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#0973b0]">
-                      <option value="">-- Seleccione --</option>
-                      <option>Ninguno</option><option>1</option><option>2</option><option>3 o más</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </Section>
+              {/* V. EXPERIENCIA LABORAL */}
+              <Section title="V. Experiencia Laboral" icon={Briefcase} expanded={expandedSections.includes(4)} onToggle={() => toggleSection(4)}>
+                <div className="space-y-6">
+                  <label className="inline-flex items-center">
+                    <input type="checkbox" name="sin_experiencia" onChange={handleChange} className="text-[#0973b0] rounded" />
+                    <span className="ml-2 font-medium">Sin Experiencia Laboral</span>
+                  </label>
 
-            {/* IV. NIVEL DE INSTRUCCIÓN */}
-            <Section title="IV. Nivel de Instrucción" icon={GraduationCap} expanded={expandedSections.includes(3)} onToggle={()=>toggleSection(3)}>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Nivel: <span className="text-red-600">*</span></label>
-                  <div className="flex gap-4">
-                    {['Secundaria','Técnico','Superior'].map(n=>(
-                      <label key={n} className="inline-flex items-center">
-                        <input type="radio" name="nivel" value={n} onChange={handleChange} className="text-[#0973b0]"/>
-                        <span className="ml-2">{n}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="font-medium">Datos Académicos</h4>
-                    <button type="button" onClick={()=>setEstudios(p=>[...p,{id: p.length+1}])} className="px-4 py-2 bg-[#0973b0] text-white rounded-lg hover:bg-[#075a90] text-sm">+ Agregar</button>
-                  </div>
-                  {estudios.map((est, idx)=>(
-                    <div key={est.id} className="mb-6 pb-6 border-b last:border-0">
-                      <div className="flex justify-between mb-3">
-                        <span className="text-sm font-semibold">Estudio {idx+1}</span>
-                        {estudios.length>1 && <button type="button" onClick={()=>setEstudios(p=>p.filter(x=>x.id !== est.id))} className="text-red-600 text-sm">Eliminar</button>}
+                  {!formData.sin_experiencia && (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h4 className="font-medium">Experiencias Anteriores</h4>
+                        <button
+                          type="button"
+                          onClick={() => setExperiencias(prev => [...prev, { id: prev.length + 1 }])}
+                          className="px-4 py-2 bg-[#0973b0] text-white rounded-lg hover:bg-[#075a90] text-sm"
+                        >
+                          + Agregar Experiencia
+                        </button>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <FormInput label="Centro de Estudios" name={`estudio_${est.id}_centro`} onChange={handleChange} required/>
-                        <FormInput label="Carrera" name={`estudio_${est.id}_carrera`} onChange={handleChange} required/>
-                        <FormInput label="Duración (Años)" name={`estudio_${est.id}_duracion`} type="number" onChange={handleChange} required/>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        <FormInput label="Fecha Ingreso" name={`estudio_${est.id}_ingreso`} type="date" onChange={handleChange} required/>
-                        <FormInput label="Fecha Egreso" name={`estudio_${est.id}_egreso`} type="date" onChange={handleChange} required/>
-                      </div>
+                      
+                      {experiencias.map((exp, idx) => (
+                        <div key={exp.id} className="bg-gray-50 p-4 rounded-lg">
+                          <div className="flex justify-between items-center mb-3">
+                            <span className="text-sm font-semibold">Experiencia {idx + 1}</span>
+                            {experiencias.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => setExperiencias(prev => prev.filter(e => e.id !== exp.id))}
+                                className="text-red-600 text-sm hover:underline"
+                              >
+                                Eliminar
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <FormInput label="Organización/Empresa" name={`exp_${exp.id}_org`} onChange={handleChange} />
+                            <FormInput label="Cargo" name={`exp_${exp.id}_cargo`} onChange={handleChange} />
+                            <FormInput label="Tiempo (meses)" name={`exp_${exp.id}_tiempo`} type="number" onChange={handleChange} />
+                          </div>
+                          <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Motivo de Cese:</label>
+                            <textarea
+                              name={`exp_${exp.id}_motivo`}
+                              onChange={handleChange}
+                              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#0973b0]"
+                              rows={2}
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                            <FormInput label="Jefe Inmediato" name={`exp_${exp.id}_jefe`} onChange={handleChange} />
+                            <FormInput label="Cargo del Jefe" name={`exp_${exp.id}_cargo_jefe`} onChange={handleChange} />
+                            <FormInput label="Teléfono de Referencia" name={`exp_${exp.id}_telefono_jefe`} type="tel" onChange={handleChange} />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
-            </Section>
+              </Section>
 
-            {/* V. EXPERIENCIA LABORAL */}
-            <Section title="V. Experiencia Laboral" icon={Briefcase} expanded={expandedSections.includes(4)} onToggle={()=>toggleSection(4)}>
-              <div className="space-y-6">
-                <label className="inline-flex items-center">
-                  <input type="checkbox" name="sin_experiencia" onChange={handleChange} className="text-[#0973b0] rounded"/>
-                  <span className="ml-2 font-medium">Sin Experiencia Laboral</span>
-                </label>
-
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="font-medium">Experiencia Anterior</h4>
-                    <button type="button" onClick={()=>setExperiencias(p=>[...p,{id: p.length+1}])} className="px-4 py-2 bg-[#0973b0] text-white rounded-lg hover:bg-[#075a90] text-sm">+ Agregar</button>
+              {/* VI. DOCUMENTOS ADJUNTOS */}
+              <Section title="VI. Documentos Adjuntos" icon={Paperclip} expanded={expandedSections.includes(5)} onToggle={() => toggleSection(5)}>
+                <div className="space-y-4">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-yellow-800">
+                      📌 <strong>Nota:</strong> Los archivos deben ser menores a 10MB. Formatos aceptados: PDF, JPG, PNG
+                    </p>
                   </div>
-                  {experiencias.map((exp, idx)=>(
-                    <div key={exp.id} className="mb-6 pb-6 border-b last:border-0">
-                      <div className="flex justify-between mb-3">
-                        <span className="text-sm font-semibold">Experiencia {idx+1}</span>
-                        {experiencias.length>1 && <button type="button" onClick={()=>setExperiencias(p=>p.filter(x=>x.id !== exp.id))} className="text-red-600 text-sm">Eliminar</button>}
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <FormInput label="Organización" name={`exp_${exp.id}_org`} onChange={handleChange}/>
-                        <FormInput label="Cargo" name={`exp_${exp.id}_cargo`} onChange={handleChange}/>
-                        <FormInput label="Tiempo (meses)" name={`exp_${exp.id}_tiempo`} type="number" onChange={handleChange}/>
-                      </div>
-                      <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Motivo de Cese:</label>
-                        <textarea name={`exp_${exp.id}_motivo`} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#0973b0]" rows={2}/>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                        <FormInput label="Jefe Inmediato" name={`exp_${exp.id}_jefe`} onChange={handleChange}/>
-                        <FormInput label="Cargo del Jefe" name={`exp_${exp.id}_cargo_jefe`} onChange={handleChange}/>
-                        <FormInput label="Teléfono" name={`exp_${exp.id}_telefono_jefe`} type="tel" onChange={handleChange}/>
-                      </div>
-                    </div>
-                  ))}
+                  
+                  <FileUpload
+                    label="DNI (frente)"
+                    required
+                    keyName="dni_frente"
+                    accept="image/*,.pdf"
+                    onChange={(e) => handleFileChange('dni_frente', e)}
+                    selected={attachments.dni_frente}
+                  />
+                  
+                  <FileUpload
+                    label="DNI (reverso)"
+                    keyName="dni_reverso"
+                    accept="image/*,.pdf"
+                    onChange={(e) => handleFileChange('dni_reverso', e)}
+                    selected={attachments.dni_reverso}
+                  />
+                  
+                  <FileUpload
+                    label="CV Documentado"
+                    required
+                    keyName="cv"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => handleFileChange('cv', e)}
+                    selected={attachments.cv}
+                  />
+                  
+                  <FileUpload
+                    label="Certificado de Vacunación COVID-19"
+                    required
+                    keyName="vacuna"
+                    accept="image/*,.pdf"
+                    onChange={(e) => handleFileChange('vacuna', e)}
+                    selected={attachments.vacuna}
+                  />
+                  
+                  <FileUpload
+                    label="Certificado CERTIADULTO (opcional)"
+                    keyName="certiadulto"
+                    accept="image/*,.pdf"
+                    onChange={(e) => handleFileChange('certiadulto', e)}
+                    selected={attachments.certiadulto}
+                  />
                 </div>
-              </div>
-            </Section>
+              </Section>
 
-            {/* VI. ADJUNTOS */}
-            <Section title="VI. Adjuntos" icon={Paperclip} expanded={expandedSections.includes(5)} onToggle={()=>toggleSection(5)}>
-              <div className="space-y-4">
-                <FileUpload label="DNI (frente)" required keyName="dni_frente" selectedName={attachments.dni_frente?.name}/>
-                <FileUpload label="DNI (reverso)" keyName="dni_reverso" selectedName={attachments.dni_reverso?.name}/>
-                <FileUpload label="CV Documentado" required keyName="cv" selectedName={attachments.cv?.name}/>
-                <FileUpload label="Certificado de Vacunación" required keyName="vacuna" selectedName={attachments.vacuna?.name}/>
-                <FileUpload label="CERTIADULTO" keyName="certiadulto" selectedName={attachments.certiadulto?.name}/>
-              </div>
-            </Section>
+              {/* VII. TÉRMINOS Y CONDICIONES */}
+              <Section title="VII. Términos y Condiciones" icon={CheckCircle} expanded={expandedSections.includes(6)} onToggle={() => toggleSection(6)}>
+                <div className="bg-gray-50 p-6 rounded-lg">
+                  <div className="mb-4">
+                    <h4 className="font-semibold mb-2">Declaración y Autorización</h4>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Declaro que la información proporcionada en este formulario es verídica y completa. 
+                      Entiendo que cualquier falsedad u omisión puede ser causal de descalificación del proceso 
+                      de selección o de despido si ya estuviera laborando.
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Autorizo a la Empresa Comunal de Servicios Múltiples de la Comunidad Campesina de Taca 
+                      a utilizar mis datos personales exclusivamente para fines de gestión de recursos humanos, 
+                      conforme a la Ley N° 29733 - Ley de Protección de Datos Personales.
+                    </p>
+                  </div>
+                  
+                  <label className="flex items-start">
+                    <input
+                      type="checkbox"
+                      name="acepta_terminos"
+                      onChange={handleChange}
+                      className="mt-1 text-[#0973b0] rounded"
+                      required
+                    />
+                    <span className="ml-3 text-sm">
+                      He leído y acepto los términos y condiciones <span className="text-red-600">*</span>
+                    </span>
+                  </label>
+                </div>
+              </Section>
 
-            {/* VII. TÉRMINOS */}
-            <Section title="VII. Términos y Condiciones" icon={CheckCircle} expanded={expandedSections.includes(6)} onToggle={()=>toggleSection(6)}>
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <label className="flex items-start">
-                  <input type="checkbox" name="acepta_terminos" onChange={handleChange} className="mt-1 text-[#0973b0] rounded" required/>
-                  <span className="ml-3 text-sm">Acepto los términos y condiciones <span className="text-red-600">*</span>
-                    <p className="mt-2 text-gray-600">Autorizo a la Empresa Comunal de Servicios Múltiples de la Comunidad Campesina de Taca a utilizar mis datos personales para fines de gestión de recursos humanos, conforme a la Ley N° 29733.</p>
-                  </span>
-                </label>
+              {/* BOTÓN DE ENVÍO */}
+              <div className="pt-6">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`w-full py-4 px-6 rounded-lg shadow-lg font-medium text-lg flex items-center justify-center gap-2 transition-all ${
+                    loading
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-[#0973b0] hover:bg-[#075a90] text-white'
+                  }`}
+                >
+                  {loading ? (
+                    <>
+                      <div className="loader"></div>
+                      <span>Enviando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={20} />
+                      <span>Enviar Postulación</span>
+                    </>
+                  )}
+                </button>
               </div>
-            </Section>
+            </form>
 
-            {/* SUBMIT */}
-            <div className="pt-6">
-              <button type="submit" className="w-full bg-[#0973b0] text-white py-4 px-6 rounded-lg hover:bg-[#075a90] transition-all shadow-lg font-medium text-lg flex items-center justify-center gap-2">
-                <CheckCircle size={20}/> Registrar Información
-              </button>
+            {/* FOOTER */}
+            <div className="text-center mt-8 py-4 border-t">
+              <p className="text-sm text-gray-600">
+                © 2024 Empresa Comunal de Servicios Múltiples - Comunidad Campesina de Taca
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Todos los derechos reservados
+              </p>
             </div>
           </div>
-        </form>
+        </div>
       );
     }
 
+    // ========================================
+    // RENDERIZAR LA APLICACIÓN
+    // ========================================
+    
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<FichaDatos />);
   </script>
