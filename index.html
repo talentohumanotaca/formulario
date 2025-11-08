@@ -22,6 +22,37 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    .logo-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .logo-image {
+      max-width: 250px;
+      height: auto;
+    }
+    .info-message {
+      background-color: #f0f9ff;
+      border: 1px solid #0973b0;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-bottom: 2rem;
+    }
+    .info-message ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    .info-message li {
+      margin: 0.5rem 0;
+      color: #1e40af;
+      font-size: 0.875rem;
+    }
+    .info-message li:before {
+      content: "•";
+      margin-right: 0.5rem;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -36,6 +67,8 @@
     
     // ⚠️ IMPORTANTE: REEMPLAZA ESTA URL CON LA URL DE TU GOOGLE APPS SCRIPT
     const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyo3aQJwLzEc_ewkJIKkGdZsmQpJUqI6LeQi7BgrxwtL2ABQ26_P1QhWyjR5-21WlOAug/exec';
+    // URL del logo - archivo en la misma carpeta que index.html
+    const LOGO_URL = 'logo_ec_taca.png';
     
     // ========================================
     // COMPONENTES DE ICONOS SVG
@@ -311,13 +344,24 @@
       return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 py-8 px-4">
           <div className="max-w-6xl mx-auto">
+             {/* LOGO */}
+            <div className="logo-container">
+              <img src={LOGO_URL} alt="EC-TACA Logo" className="logo-image" />
+            </div>
             {/* HEADER */}
-            <div className="text-center mb-8">
-              <div className="inline-block p-4 bg-white rounded-full shadow-lg mb-4">
-                <Building2 size={48} className="text-[#0973b0]" />
-              </div>
+            <div className="text-center mb-6">
               <h1 className="text-4xl font-bold text-gray-800 mb-2">FICHA DE ACTUALIZACIÓN DE DATOS</h1>
               <p className="text-gray-600">Empresa Comunal de Servicios Múltiples - Comunidad Campesina de Taca</p>
+            </div>
+            
+             {/* MENSAJE INFORMATIVO */}
+            <div className="info-message">
+              <ul>
+                <li>(*) Campos obligatorios.</li>
+                <li>Los campos resaltados en rojo indican información incorrecta.</li>
+                <li>Todo los campos deben ser contemplados, estos datos son usados para activar su seguro y contrato de trabajo.</li>
+                <li>Los campos ingresados, con excepción de los archivos, se guardarán temporalmente hasta que se complete el registro de la información.</li>
+              </ul>
             </div>
 
             {/* MENSAJE DE ESTADO */}
